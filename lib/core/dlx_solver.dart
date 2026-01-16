@@ -30,6 +30,7 @@ class DLXSolver {
   final List<List<int>> solutions = [];
   final List<int> _currentSolution = [];
   final int _totalColumns;
+  void Function(List<int>)? onSolutionFound;
 
   void _buildMatrix() {
     header = DLXNode();
@@ -111,7 +112,9 @@ class DLXSolver {
 
   void _search(int maxSolutions) {
     if (header.right == header) {
-      solutions.add(List.from(_currentSolution));
+      final solution = List<int>.from(_currentSolution);
+      solutions.add(solution);
+      onSolutionFound?.call(solution);
       return;
     }
 
