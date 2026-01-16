@@ -30,6 +30,8 @@ class DLXSolver {
   final List<List<int>> solutions = [];
   final List<int> _currentSolution = [];
   final int _totalColumns;
+  void Function(List<int>)? onSolutionFound;
+  int _operationCount = 0;
 
   void _buildMatrix() {
     header = DLXNode();
@@ -109,9 +111,70 @@ class DLXSolver {
     _search(maxSolutions);
   }
 
+  /// Async solve that yields control periodically for UI updates
+  Future<void> solveAsync({
+    int maxSolutions = -1,
+    int yieldEvery = 5000,
+  }) async {
+    _operationCount = 0;
+    await _searchAsync(maxSolutions, yieldEvery);
+  }
+
+  Future<void> _searchAsync(int maxSolutions, int yieldEvery) async {
+    _operationCount++;
+    if (_operationCount % yieldEvery == 0) {
+      await Future<void>.delayed(Duration.zero);
+    }
+
+    if (header.right == header) {
+      final solution = List<int>.from(_currentSolution);
+      solutions.add(solution);
+      onSolutionFound?.call(solution);
+      return;
+    }
+
+    if (maxSolutions > 0 && solutions.length >= maxSolutions) return;
+
+    // Choose column with minimum size (MRV heuristic)
+    DLXNode? minCol;
+    var minSize = 999999;
+    for (var col = header.right; col != header; col = col.right) {
+      if (col.size < minSize) {
+        minSize = col.size;
+        minCol = col;
+      }
+    }
+
+    if (minCol == null || minSize == 0) return;
+
+    _cover(minCol);
+
+    for (var row = minCol.down; row != minCol; row = row.down) {
+      _currentSolution.add(row.row);
+
+      for (var node = row.right; node != row; node = node.right) {
+        _cover(node.column);
+      }
+
+      await _searchAsync(maxSolutions, yieldEvery);
+
+      for (var node = row.left; node != row; node = node.left) {
+        _uncover(node.column);
+      }
+
+      _currentSolution.removeLast();
+
+      if (maxSolutions > 0 && solutions.length >= maxSolutions) break;
+    }
+
+    _uncover(minCol);
+  }
+
   void _search(int maxSolutions) {
     if (header.right == header) {
-      solutions.add(List.from(_currentSolution));
+      final solution = List<int>.from(_currentSolution);
+      solutions.add(solution);
+      onSolutionFound?.call(solution);
       return;
     }
 

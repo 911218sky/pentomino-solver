@@ -1,12 +1,10 @@
 /// All solutions tab - displays all puzzle solutions in a grid
 library;
 
-import 'package:flutter/foundation.dart';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:pentomino/core/pentomino_solver.dart';
 import 'package:pentomino/ui/theme.dart';
-
-List<List<List<int>>> _solveAll(void _) => PentominoSolver().solve();
 
 class AllSolutionsTab extends StatefulWidget {
   const AllSolutionsTab({super.key});
@@ -16,28 +14,68 @@ class AllSolutionsTab extends StatefulWidget {
 }
 
 class _AllSolutionsTabState extends State<AllSolutionsTab> with AutomaticKeepAliveClientMixin {
-  List<List<List<int>>> _solutions = [];
+  final List<List<List<int>>> _solutions = [];
   bool _solving = false;
+  bool _completed = false;
   Duration? _solveTime;
+  StreamSubscription<List<List<int>>>? _subscription;
+  Stopwatch? _stopwatch;
 
   @override
   bool get wantKeepAlive => true;
 
-  Future<void> _solve() async {
+  @override
+  void dispose() {
+    _subscription?.cancel();
+    super.dispose();
+  }
+
+  void _solve() {
+    _subscription?.cancel();
+    
     setState(() {
       _solving = true;
-      _solutions = [];
+      _completed = false;
+      _solutions.clear();
       _solveTime = null;
     });
 
-    final sw = Stopwatch()..start();
-    final results = await compute(_solveAll, null);
-    sw.stop();
+    _stopwatch = Stopwatch()..start();
+    final solver = PentominoSolver();
+    
+    var updateCounter = 0;
+    _subscription = solver.solveStream().listen(
+      (solution) {
+        _solutions.add(solution);
+        updateCounter++;
+        // Update UI every 50 solutions for performance
+        if (updateCounter % 50 == 0) {
+          setState(() {});
+        }
+      },
+      onDone: () {
+        _stopwatch?.stop();
+        setState(() {
+          _solveTime = _stopwatch?.elapsed;
+          _solving = false;
+          _completed = true;
+        });
+      },
+      onError: (Object e) {
+        setState(() {
+          _solving = false;
+        });
+      },
+    );
+  }
 
+  void _stop() {
+    _subscription?.cancel();
+    _stopwatch?.stop();
     setState(() {
-      _solutions = results;
-      _solveTime = sw.elapsed;
+      _solveTime = _stopwatch?.elapsed;
       _solving = false;
+      _completed = _solutions.isNotEmpty;
     });
   }
 
@@ -60,31 +98,78 @@ class _AllSolutionsTabState extends State<AllSolutionsTab> with AutomaticKeepAli
         spacing: 16,
         runSpacing: 10,
         children: [
-          ElevatedButton.icon(
-            onPressed: _solving ? null : _solve,
-            icon: _solving
-                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                : const Icon(Icons.play_arrow_rounded, size: 20),
-            label: Text(_solving ? 'Solving...' : 'Find All', style: const TextStyle(fontSize: 14)),
-          ),
-          if (_solveTime != null)
+          if (_solving)
+            ElevatedButton.icon(
+              onPressed: _stop,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.error,
+              ),
+              icon: const Icon(Icons.stop_rounded, size: 20),
+              label: const Text('Stop', style: TextStyle(fontSize: 14)),
+            )
+          else
+            ElevatedButton.icon(
+              onPressed: _solve,
+              icon: const Icon(Icons.play_arrow_rounded, size: 20),
+              label: const Text('Find All', style: TextStyle(fontSize: 14)),
+            ),
+          if (_solving || _solutions.isNotEmpty)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               decoration: BoxDecoration(
-                color: AppColors.success.withValues(alpha: 0.12),
+                color: _completed 
+                    ? AppColors.success.withValues(alpha: 0.12)
+                    : AppColors.primary.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppColors.success.withValues(alpha: 0.3)),
+                border: Border.all(
+                  color: _completed 
+                      ? AppColors.success.withValues(alpha: 0.3)
+                      : AppColors.primary.withValues(alpha: 0.3),
+                ),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.check_circle_rounded, color: AppColors.success, size: 18),
+                  if (_solving)
+                    const SizedBox(
+                      width: 16, 
+                      height: 16, 
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  else
+                    Icon(
+                      Icons.check_circle_rounded, 
+                      color: _completed ? AppColors.success : AppColors.primary, 
+                      size: 18,
+                    ),
                   const SizedBox(width: 8),
                   Text(
-                    '${_solutions.length} solutions • ${_solveTime!.inMilliseconds}ms',
-                    style: const TextStyle(color: AppColors.success, fontWeight: FontWeight.w600, fontSize: 13),
+                    _solving 
+                        ? '${_solutions.length} solutions found...'
+                        : '${_solutions.length} solutions • ${_solveTime?.inMilliseconds ?? 0}ms',
+                    style: TextStyle(
+                      color: _completed ? AppColors.success : AppColors.primary, 
+                      fontWeight: FontWeight.w600, 
+                      fontSize: 13,
+                    ),
                   ),
                 ],
+              ),
+            ),
+          if (_solving)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: AppColors.textSecondary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                '${(_solutions.length / 2339 * 100).toStringAsFixed(1)}%',
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
               ),
             ),
         ],
@@ -112,7 +197,7 @@ class _AllSolutionsTabState extends State<AllSolutionsTab> with AutomaticKeepAli
             ),
             const SizedBox(height: 20),
             Text(
-              _solving ? 'Computing all solutions...' : 'Click "Find All" to discover solutions',
+              _solving ? 'Computing solutions...' : 'Click "Find All" to discover solutions',
               style: TextStyle(
                 color: _solving ? AppColors.text : AppColors.textSecondary,
                 fontSize: 15,
@@ -121,10 +206,11 @@ class _AllSolutionsTabState extends State<AllSolutionsTab> with AutomaticKeepAli
             ),
             if (_solving) ...[
               const SizedBox(height: 12),
-              const SizedBox(
-                width: 120,
+              SizedBox(
+                width: 200,
                 child: LinearProgressIndicator(
-                  backgroundColor: Color(0xFFE8ECF4),
+                  value: _solutions.length / 2339,
+                  backgroundColor: const Color(0xFFE8ECF4),
                   color: AppColors.primary,
                 ),
               ),
@@ -134,23 +220,38 @@ class _AllSolutionsTabState extends State<AllSolutionsTab> with AutomaticKeepAli
       );
     }
 
-    return GridView.builder(
-      padding: const EdgeInsets.all(12),
-      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-        maxCrossAxisExtent: 180,
-        childAspectRatio: 1.4,
-        crossAxisSpacing: 10,
-        mainAxisSpacing: 10,
-      ),
-      itemCount: _solutions.length,
-      cacheExtent: 800,
-      itemBuilder: (ctx, i) => RepaintBoundary(
-        child: _SolutionCard(
-          key: ValueKey(i),
-          board: _solutions[i],
-          index: i + 1,
+    return Column(
+      children: [
+        if (_solving)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: LinearProgressIndicator(
+              value: _solutions.length / 2339,
+              backgroundColor: const Color(0xFFE8ECF4),
+              color: AppColors.primary,
+            ),
+          ),
+        Expanded(
+          child: GridView.builder(
+            padding: const EdgeInsets.all(12),
+            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+              maxCrossAxisExtent: 180,
+              childAspectRatio: 1.4,
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 10,
+            ),
+            itemCount: _solutions.length,
+            cacheExtent: 800,
+            itemBuilder: (ctx, i) => RepaintBoundary(
+              child: _SolutionCard(
+                key: ValueKey(i),
+                board: _solutions[i],
+                index: i + 1,
+              ),
+            ),
+          ),
         ),
-      ),
+      ],
     );
   }
 }

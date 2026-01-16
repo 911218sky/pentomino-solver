@@ -1,6 +1,8 @@
 /// Pentomino puzzle solver using Dancing Links algorithm
 library;
 
+import 'dart:async';
+
 import 'package:pentomino/core/dlx_solver.dart';
 import 'package:pentomino/core/pentomino_data.dart';
 
@@ -95,6 +97,54 @@ class PentominoSolver {
     }
     
     return solutions;
+  }
+
+  /// Solve with streaming results (for progressive UI updates)
+  /// Yields control periodically to keep UI responsive on web
+  Stream<List<List<int>>> solveStream({bool eliminateSymmetry = true}) async* {
+    _generatePlacements();
+
+    final dlx = DLXSolver(numPieces: pieceNames.length, numCells: boardRows * boardCols);
+    final rowInfo = <(int, List<List<int>>)>[];
+
+    var rowId = 0;
+    for (var p = 0; p < pieceNames.length; p++) {
+      for (final cells in _allPlacements![p]) {
+        dlx.addRow(p, cells, rowId, boardCols);
+        rowInfo.add((p, cells));
+        rowId++;
+      }
+    }
+
+    // Use StreamController to yield solutions as they're found
+    final controller = StreamController<List<List<int>>>();
+    
+    dlx.onSolutionFound = (solution) {
+      final board = _convertSolution(solution, rowInfo);
+      if (!eliminateSymmetry || _isCanonicalSolution(board)) {
+        controller.add(board);
+      }
+    };
+
+    // Start solver in background
+    unawaited(dlx.solveAsync(yieldEvery: 2000).then((_) {
+      controller.close();
+    }));
+
+    // Yield from controller
+    yield* controller.stream;
+  }
+
+  /// Convert a single solution
+  List<List<int>> _convertSolution(List<int> solution, List<(int, List<List<int>>)> rowInfo) {
+    final board = List.generate(boardRows, (_) => List.filled(boardCols, -1));
+    for (final rowIdx in solution) {
+      final (pieceIdx, cells) = rowInfo[rowIdx];
+      for (final cell in cells) {
+        board[cell[0]][cell[1]] = pieceIdx;
+      }
+    }
+    return board;
   }
 
   /// Solve with pre-placed pieces on the board

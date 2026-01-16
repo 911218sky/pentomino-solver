@@ -219,30 +219,27 @@ class _InteractiveBoardState extends State<InteractiveBoard> {
 class DragPieceData {
   DragPieceData({
     required this.pieceIndex,
-    required int variantIndex,
-  }) : _variantIndex = variantIndex {
+    required this.variantIndex,
+  }) {
     // Register this as the active drag data
     _activeDragData = this;
   }
 
   final int pieceIndex;
-  int _variantIndex;
-  
-  int get variantIndex => _variantIndex;
-  set variantIndex(int value) => _variantIndex = value;
+  int variantIndex;
   
   // Static reference to track the currently active drag data
   static DragPieceData? _activeDragData;
   
   /// Get the current variant from the active drag, or from this instance
   int get currentVariant => _activeDragData?.pieceIndex == pieceIndex 
-      ? _activeDragData!._variantIndex 
-      : _variantIndex;
+      ? _activeDragData!.variantIndex 
+      : variantIndex;
   
   /// Update the variant on the active drag data
   static void updateActiveVariant(int pieceIndex, int variant) {
     if (_activeDragData?.pieceIndex == pieceIndex) {
-      _activeDragData!._variantIndex = variant;
+      _activeDragData!.variantIndex = variant;
     }
   }
   
