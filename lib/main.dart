@@ -64,10 +64,10 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
 
   Widget _buildHeader() {
     return Container(
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: Colors.white,
         border: Border(
-          bottom: BorderSide(color: AppColors.border, width: 1),
+          bottom: BorderSide(color: AppColors.border),
         ),
       ),
       child: SafeArea(
@@ -160,11 +160,11 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
           borderRadius: BorderRadius.circular(12),
           border: isSelected ? Border.all(color: AppColors.border) : null,
           boxShadow: isSelected
-              ? [
+              ? const [
                   BoxShadow(
                     color: AppColors.shadow,
                     blurRadius: 8,
-                    offset: const Offset(0, 2),
+                    offset: Offset(0, 2),
                   ),
                 ]
               : null,

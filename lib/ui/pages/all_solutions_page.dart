@@ -30,7 +30,7 @@ class _AllSolutionsTabState extends State<AllSolutionsTab> with AutomaticKeepAli
     super.dispose();
   }
 
-  Future<void> _solve() async {
+  void _solve() {
     _subscription?.cancel();
     
     setState(() {
@@ -43,12 +43,15 @@ class _AllSolutionsTabState extends State<AllSolutionsTab> with AutomaticKeepAli
     _stopwatch = Stopwatch()..start();
     final solver = PentominoSolver();
     
-    // Use stream for progressive updates
+    var updateCounter = 0;
     _subscription = solver.solveStream().listen(
       (solution) {
-        setState(() {
-          _solutions.add(solution);
-        });
+        _solutions.add(solution);
+        updateCounter++;
+        // Update UI every 50 solutions for performance
+        if (updateCounter % 50 == 0) {
+          setState(() {});
+        }
       },
       onDone: () {
         _stopwatch?.stop();
@@ -58,7 +61,7 @@ class _AllSolutionsTabState extends State<AllSolutionsTab> with AutomaticKeepAli
           _completed = true;
         });
       },
-      onError: (e) {
+      onError: (Object e) {
         setState(() {
           _solving = false;
         });

@@ -1,6 +1,8 @@
 /// Pentomino puzzle solver using Dancing Links algorithm
 library;
 
+import 'dart:async';
+
 import 'package:pentomino/core/dlx_solver.dart';
 import 'package:pentomino/core/pentomino_data.dart';
 
@@ -98,6 +100,7 @@ class PentominoSolver {
   }
 
   /// Solve with streaming results (for progressive UI updates)
+  /// Yields control periodically to keep UI responsive on web
   Stream<List<List<int>>> solveStream({bool eliminateSymmetry = true}) async* {
     _generatePlacements();
 
@@ -113,23 +116,23 @@ class PentominoSolver {
       }
     }
 
-    // Use callback to yield solutions as they're found
-    final pendingSolutions = <List<List<int>>>[];
+    // Use StreamController to yield solutions as they're found
+    final controller = StreamController<List<List<int>>>();
     
     dlx.onSolutionFound = (solution) {
       final board = _convertSolution(solution, rowInfo);
       if (!eliminateSymmetry || _isCanonicalSolution(board)) {
-        pendingSolutions.add(board);
+        controller.add(board);
       }
     };
 
-    // Run solver in chunks to allow UI updates
-    dlx.solve();
-    
-    // Yield all solutions
-    for (final solution in pendingSolutions) {
-      yield solution;
-    }
+    // Start solver in background
+    unawaited(dlx.solveAsync(yieldEvery: 2000).then((_) {
+      controller.close();
+    }));
+
+    // Yield from controller
+    yield* controller.stream;
   }
 
   /// Convert a single solution
