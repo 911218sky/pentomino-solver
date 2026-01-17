@@ -56,5 +56,6 @@ web/workers/*.wasm
 web/workers/*.mjs
 web/workers/*.js
 web/workers/*.js.map
+web/workers/*.js.deps
 web/workers/*.support.js
 web/workers/*.unopt.wasm

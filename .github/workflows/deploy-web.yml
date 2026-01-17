@@ -33,11 +33,11 @@ jobs:
       - name: Generate Squadron workers
         run: dart run build_runner build --delete-conflicting-outputs
 
-      - name: Compile WASM worker
+      - name: Compile JavaScript worker
         run: bash tools/build/build_worker.sh
 
-      - name: Build Web (WebAssembly)
-        run: flutter build web --release --wasm --base-href "/pentomino-solver/"
+      - name: Build Web (JavaScript)
+        run: flutter build web --release --base-href "/pentomino-solver/"
 
       - name: Setup Pages
         uses: actions/configure-pages@v4

@@ -12,7 +12,7 @@ part 'pentomino_solver_service.worker.g.dart';
 
 @SquadronService(
   baseUrl: '~/workers',
-  targetPlatform: TargetPlatform.vm | TargetPlatform.wasm,
+  targetPlatform: TargetPlatform.vm | TargetPlatform.js,
 )
 base class PentominoSolverService {
   /// Solve pentomino puzzle and stream results
