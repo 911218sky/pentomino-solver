@@ -11,9 +11,6 @@ on:
         required: true
         default: 'v1.0.0'
 
-env:
-  FLUTTER_VERSION: 'stable'
-
 jobs:
   build-windows:
     runs-on: windows-latest
@@ -23,7 +20,6 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: 'stable'
           cache: true
       
@@ -63,7 +59,6 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: 'stable'
           cache: true
       
@@ -98,7 +93,6 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: 'stable'
           cache: true
       
@@ -158,3 +152,4 @@ jobs:
           files: |
             artifacts/windows-build/Pentomino-windows-x64.zip
             artifacts/linux-build/Pentomino-linux-x64.tar.gz
+            artifacts/macos-build/Pentomino-macos.zip
