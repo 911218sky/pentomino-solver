@@ -5,7 +5,6 @@ class AppLogger {
   static final Logger _logger = Logger(
     printer: SimplePrinter(
       colors: false,
-      printTime: false,
     ),
   );
 

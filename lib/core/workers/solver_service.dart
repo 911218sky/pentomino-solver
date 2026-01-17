@@ -102,14 +102,14 @@ class SolverService {
                   );
                   _statusController.add(SolverStatus.completed);
                   _isRunning = false;
-                  _cleanup();
+                  unawaited(_cleanup());
               }
             },
             onError: (Object error, StackTrace stack) {
               AppLogger.error('[SolverService] Stream error: $error', error, stack);
               _statusController.add(SolverStatus.error);
               _isRunning = false;
-              _cleanup();
+              unawaited(_cleanup());
             },
             onDone: () {
               AppLogger.info('[SolverService] Stream completed');
@@ -117,7 +117,7 @@ class SolverService {
                 _statusController.add(SolverStatus.completed);
                 _isRunning = false;
               }
-              _cleanup();
+              unawaited(_cleanup());
             },
           );
 
@@ -126,7 +126,7 @@ class SolverService {
       AppLogger.error('[SolverService] Failed to start: $e', e, stack);
       _statusController.add(SolverStatus.error);
       _isRunning = false;
-      _cleanup();
+      unawaited(_cleanup());
     }
   }
 
