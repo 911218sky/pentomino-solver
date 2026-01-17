@@ -33,9 +33,6 @@ jobs:
       - name: Generate Squadron workers
         run: dart run build_runner build --delete-conflicting-outputs
 
-      - name: Set worker base URL for GitHub Pages
-        run: dart tools/build/set_worker_path.dart /pentomino-solver/workers
-
       - name: Compile WASM worker
         run: bash tools/build/build_worker.sh
 
