@@ -153,3 +153,4 @@ jobs:
             artifacts/windows-build/Pentomino-windows-x64.zip
             artifacts/linux-build/Pentomino-linux-x64.tar.gz
             artifacts/macos-build/Pentomino-macos.zip
+
