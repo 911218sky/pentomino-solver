@@ -32,12 +32,16 @@ base class PentominoSolverService {
     // Create a stream controller to emit progress in real-time
     final controller = StreamController<Map<String, dynamic>>();
     
+    // Track the last operation count from progress updates
+    var lastOperationCount = 0;
+    
     // Start solving asynchronously
     unawaited(
       solver.solveAsync(
         maxSolutions: maxSolutions,
         eliminateSymmetry: eliminateSymmetry,
         onProgress: (found, operations) {
+          lastOperationCount = operations;
           // Emit progress update
           controller.add({
             'type': 'progress',
@@ -57,7 +61,7 @@ base class PentominoSolverService {
         controller.add({
           'type': 'complete',
           'totalSolutions': solutions.length,
-          'totalOperations': solver.solve().length,
+          'totalOperations': lastOperationCount,
         });
         controller.close();
       }).catchError((Object error, StackTrace stack) {
