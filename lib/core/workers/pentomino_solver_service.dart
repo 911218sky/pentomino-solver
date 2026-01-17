@@ -11,7 +11,7 @@ import 'pentomino_solver_service.activator.g.dart';
 part 'pentomino_solver_service.worker.g.dart';
 
 @SquadronService(
-  baseUrl: '~/workers',
+  baseUrl: 'workers',
   targetPlatform: TargetPlatform.vm | TargetPlatform.wasm,
 )
 base class PentominoSolverService {
