@@ -30,6 +30,9 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
       
+      - name: Generate Squadron workers
+        run: dart run build_runner build --delete-conflicting-outputs
+      
       - name: Generate icons
         run: dart run flutter_launcher_icons
       
@@ -67,6 +70,9 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
       
+      - name: Generate Squadron workers
+        run: dart run build_runner build --delete-conflicting-outputs
+      
       - name: Generate icons
         run: dart run flutter_launcher_icons
       
@@ -98,6 +104,9 @@ jobs:
       
       - name: Get dependencies
         run: flutter pub get
+      
+      - name: Generate Squadron workers
+        run: dart run build_runner build --delete-conflicting-outputs
       
       - name: Generate icons
         run: dart run flutter_launcher_icons

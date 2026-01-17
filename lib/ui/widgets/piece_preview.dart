@@ -3,7 +3,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:pentomino/core/pentomino_data.dart';
+import 'package:pentomino/core/data/pentomino_data.dart';
 import 'package:pentomino/ui/widgets/board_widget.dart';
 
 /// Displays a preview of a pentomino piece shape
