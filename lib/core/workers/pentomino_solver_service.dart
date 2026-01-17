@@ -51,9 +51,11 @@ base class PentominoSolverService {
         },
         onSolutionFound: (board) {
           // Emit solution immediately when found
+          // Ensure board is properly serialized as a list of lists
+          final serializedBoard = board.map((row) => List<int>.from(row)).toList();
           controller.add({
             'type': 'solution',
-            'data': board,
+            'data': serializedBoard,
           });
         },
       ).then((solutions) {
