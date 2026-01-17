@@ -43,3 +43,18 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Squadron generated files
+*.activator.g.dart
+*.worker.g.dart
+*.vm.g.dart
+*.web.g.dart
+*.stub.g.dart
+
+# Compiled Web Workers (WASM and JS)
+web/workers/*.wasm
+web/workers/*.mjs
+web/workers/*.js
+web/workers/*.js.map
+web/workers/*.support.js
+web/workers/*.unopt.wasm

@@ -1,10 +1,8 @@
 /// Pentomino puzzle solver using Dancing Links algorithm
 library;
 
-import 'dart:async';
-
-import 'package:pentomino/core/dlx_solver.dart';
-import 'package:pentomino/core/pentomino_data.dart';
+import 'package:pentomino/core/algorithms/dlx_solver.dart';
+import 'package:pentomino/core/data/pentomino_data.dart';
 
 /// Solver for pentomino puzzles
 class PentominoSolver {
@@ -69,7 +67,13 @@ class PentominoSolver {
   }
 
   /// Solve and return all solutions
-  List<List<List<int>>> solve({int maxSolutions = -1, bool eliminateSymmetry = true}) {
+  /// Optional onProgress callback receives (solutionsFound, totalOperations)
+  List<List<List<int>>> solve({
+    int maxSolutions = -1,
+    bool eliminateSymmetry = true,
+    void Function(int, int)? onProgress,
+    void Function(List<List<int>>)? onSolutionFound,
+  }) {
     _generatePlacements();
 
     final dlx = DLXSolver(numPieces: pieceNames.length, numCells: boardRows * boardCols);
@@ -84,7 +88,27 @@ class PentominoSolver {
       }
     }
 
-    dlx.solve(maxSolutions: maxSolutions < 0 ? -1 : maxSolutions * 2);
+    // Set up progress callback
+    if (onProgress != null) {
+      dlx.onProgress = (solutionsFound) {
+        onProgress(solutionsFound, dlx.operationCount);
+      };
+    }
+
+    // Set up solution found callback
+    if (onSolutionFound != null) {
+      dlx.onSolutionFound = (solution) {
+        final board = _convertSolution(solution, rowInfo);
+        if (!eliminateSymmetry || _isCanonicalSolution(board)) {
+          onSolutionFound(board);
+        }
+      };
+    }
+
+    dlx.solve(
+      maxSolutions: maxSolutions < 0 ? -1 : maxSolutions * 2,
+      progressCheckInterval: 5000, // Check every 5000 operations for better performance
+    );
 
     var solutions = _convertSolutions(dlx.solutions, rowInfo);
     
@@ -99,9 +123,13 @@ class PentominoSolver {
     return solutions;
   }
 
-  /// Solve with streaming results (for progressive UI updates)
-  /// Yields control periodically to keep UI responsive on web
-  Stream<List<List<int>>> solveStream({bool eliminateSymmetry = true}) async* {
+  /// Async version that yields control periodically for progress updates
+  Future<List<List<List<int>>>> solveAsync({
+    int maxSolutions = -1,
+    bool eliminateSymmetry = true,
+    void Function(int, int)? onProgress,
+    void Function(List<List<int>>)? onSolutionFound,
+  }) async {
     _generatePlacements();
 
     final dlx = DLXSolver(numPieces: pieceNames.length, numCells: boardRows * boardCols);
@@ -116,23 +144,40 @@ class PentominoSolver {
       }
     }
 
-    // Use StreamController to yield solutions as they're found
-    final controller = StreamController<List<List<int>>>();
+    // Set up progress callback
+    if (onProgress != null) {
+      dlx.onProgress = (solutionsFound) {
+        onProgress(solutionsFound, dlx.operationCount);
+      };
+    }
+
+    // Set up solution found callback
+    if (onSolutionFound != null) {
+      dlx.onSolutionFound = (solution) {
+        final board = _convertSolution(solution, rowInfo);
+        if (!eliminateSymmetry || _isCanonicalSolution(board)) {
+          onSolutionFound(board);
+        }
+      };
+    }
+
+    await dlx.solveAsync(
+      maxSolutions: maxSolutions < 0 ? -1 : maxSolutions * 2,
+      progressCheckInterval: 5000, // Check every 5000 operations
+      yieldInterval: 10000, // Yield control every 10000 operations for better performance
+    );
+
+    var solutions = _convertSolutions(dlx.solutions, rowInfo);
     
-    dlx.onSolutionFound = (solution) {
-      final board = _convertSolution(solution, rowInfo);
-      if (!eliminateSymmetry || _isCanonicalSolution(board)) {
-        controller.add(board);
+    // Filter out mirror duplicates
+    if (eliminateSymmetry) {
+      solutions = solutions.where(_isCanonicalSolution).toList();
+      if (maxSolutions > 0 && solutions.length > maxSolutions) {
+        solutions = solutions.sublist(0, maxSolutions);
       }
-    };
-
-    // Start solver in background
-    unawaited(dlx.solveAsync(yieldEvery: 2000).then((_) {
-      controller.close();
-    }));
-
-    // Yield from controller
-    yield* controller.stream;
+    }
+    
+    return solutions;
   }
 
   /// Convert a single solution

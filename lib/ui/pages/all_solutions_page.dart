@@ -3,7 +3,8 @@ library;
 
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:pentomino/core/pentomino_solver.dart';
+import 'package:pentomino/core/utils/app_logger.dart';
+import 'package:pentomino/core/workers/solver_service.dart';
 import 'package:pentomino/ui/theme.dart';
 
 class AllSolutionsTab extends StatefulWidget {
@@ -15,24 +16,80 @@ class AllSolutionsTab extends StatefulWidget {
 
 class _AllSolutionsTabState extends State<AllSolutionsTab> with AutomaticKeepAliveClientMixin {
   final List<List<List<int>>> _solutions = [];
+  final _solverService = SolverService();
   bool _solving = false;
   bool _completed = false;
   Duration? _solveTime;
-  StreamSubscription<List<List<int>>>? _subscription;
   Stopwatch? _stopwatch;
+  StreamSubscription<List<List<int>>>? _solutionsSub;
+  StreamSubscription<SolverProgress>? _progressSub;
+  StreamSubscription<SolverStatus>? _statusSub;
 
   @override
   bool get wantKeepAlive => true;
 
   @override
+  void initState() {
+    super.initState();
+    
+    _solutionsSub = _solverService.solutions.listen(
+      (solution) {
+        setState(() {
+          _solutions.add(solution);
+        });
+      },
+      onError: (Object error) {
+        // Show error in UI
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error: $error')),
+          );
+        }
+      },
+    );
+
+    _progressSub = _solverService.progress.listen(
+      (progress) {
+        // Progress updates trigger UI refresh
+        setState(() {});
+      },
+    );
+
+    _statusSub = _solverService.status.listen(
+      (status) {
+        setState(() {
+          _solving = status == SolverStatus.solving;
+          if (status == SolverStatus.completed || status == SolverStatus.stopped) {
+            _stopwatch?.stop();
+            _solveTime = _stopwatch?.elapsed;
+            _completed = _solutions.isNotEmpty;
+          }
+          if (status == SolverStatus.error) {
+            _solving = false;
+          }
+        });
+      },
+      onError: (Object error) {
+        // Show error in UI
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Status error: $error')),
+          );
+        }
+      },
+    );
+  }
+
+  @override
   void dispose() {
-    _subscription?.cancel();
+    _solutionsSub?.cancel();
+    _progressSub?.cancel();
+    _statusSub?.cancel();
+    _solverService.dispose();
     super.dispose();
   }
 
   void _solve() {
-    _subscription?.cancel();
-    
     setState(() {
       _solving = true;
       _completed = false;
@@ -41,42 +98,27 @@ class _AllSolutionsTabState extends State<AllSolutionsTab> with AutomaticKeepAli
     });
 
     _stopwatch = Stopwatch()..start();
-    final solver = PentominoSolver();
     
-    var updateCounter = 0;
-    _subscription = solver.solveStream().listen(
-      (solution) {
-        _solutions.add(solution);
-        updateCounter++;
-        // Update UI every 50 solutions for performance
-        if (updateCounter % 50 == 0) {
-          setState(() {});
-        }
-      },
-      onDone: () {
-        _stopwatch?.stop();
-        setState(() {
-          _solveTime = _stopwatch?.elapsed;
-          _solving = false;
-          _completed = true;
-        });
-      },
-      onError: (Object e) {
-        setState(() {
-          _solving = false;
-        });
-      },
-    );
+    try {
+      _solverService.start();
+    } catch (e, stack) {
+      setState(() {
+        _solving = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to start solver: $e'),
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+      AppLogger.error('Error starting solver: $e', e, stack);
+    }
   }
 
   void _stop() {
-    _subscription?.cancel();
-    _stopwatch?.stop();
-    setState(() {
-      _solveTime = _stopwatch?.elapsed;
-      _solving = false;
-      _completed = _solutions.isNotEmpty;
-    });
+    _solverService.stop();
   }
 
   @override
