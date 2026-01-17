@@ -83,9 +83,16 @@ class SolverService {
 
               switch (type) {
                 case 'solution':
-                  final board = (message['data'] as List)
-                      .map((row) => (row as List).cast<int>())
-                      .toList();
+                  // Handle type conversion for WASM compatibility
+                  final data = message['data'];
+                  final board = <List<int>>[];
+                  if (data is List) {
+                    for (final row in data) {
+                      if (row is List) {
+                        board.add(List<int>.from(row));
+                      }
+                    }
+                  }
                   _solutionsController.add(board);
 
                 case 'progress':
